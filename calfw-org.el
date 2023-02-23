@@ -104,6 +104,38 @@ For example,
                          file date
                          cfw:org-agenda-schedule-args))))))
 
+(defun cfw:org-schedule ()
+  "Schedule the current item."
+  (interactive)
+  (let ((marker (get-text-property (point) 'org-marker)))
+    (when (and marker (marker-buffer marker))
+      (org-mark-ring-push)
+      (let* ((buffer (marker-buffer marker))
+	     (pos (marker-position marker)))
+	(set-marker-insertion-type marker t)
+	(org-with-remote-undo buffer
+	  (with-current-buffer buffer
+	    (widen)
+	    (goto-char pos)
+	    (setq ts (org-schedule nil nil))))
+	(cfw:refresh-calendar-buffer nil)))))
+
+(defun cfw:org-deadline ()
+  "Schedule the current item."
+  (interactive)
+  (let ((marker (get-text-property (point) 'org-marker)))
+    (when (and marker (marker-buffer marker))
+      (org-mark-ring-push)
+      (let* ((buffer (marker-buffer marker))
+	     (pos (marker-position marker)))
+	(set-marker-insertion-type marker t)
+	(org-with-remote-undo buffer
+	  (with-current-buffer buffer
+	    (widen)
+	    (goto-char pos)
+	    (setq ts (org-deadline nil nil))))
+	(cfw:refresh-calendar-buffer nil)))))
+
 (defun cfw:org-onclick ()
   "Jump to the clicked org item."
   (interactive)
@@ -190,20 +222,21 @@ For example,
     ;;; ------------------------------------------------------------------------
     (setq text (replace-regexp-in-string "%[0-9A-F]\\{2\\}" " " text))
     (if (string-match org-bracket-link-regexp text)
-      (let* ((desc (if (match-end 3) (org-match-string-no-properties 3 text)))
-             (link (org-link-unescape (org-match-string-no-properties 1 text)))
-             (help (concat "LINK: " link))
-             (link-props (list
-                          'face 'org-link
-                          'mouse-face 'highlight
-                          'help-echo help
-                          'org-link link)))
-        (if desc
-            (progn
-              (setq desc (apply 'propertize desc link-props))
-              (setq text (replace-match desc nil nil text)))
-          (setq link (apply 'propertize link link-props))
-          (setq text (replace-match link nil nil text)))))
+	(let* ((desc (if (match-end 1) (org-link-display-format text)))
+	;; (let* ((desc (if (match-end 1) (org-link-display-format text)))	
+               (link (org-link-unescape (org-match-string-no-properties 1 text)))
+               (help (concat "LINK: " link))
+               (link-props (list
+                            'face 'org-link
+                            'mouse-face 'highlight
+                            'help-echo help
+                            'org-link link)))
+	  (if desc
+              (progn
+		(setq desc (apply 'propertize desc link-props))
+		(setq text desc))
+            (setq link (apply 'propertize link link-props))
+            (setq text (replace-match link nil nil text)))))
     (when time-str
       (setq text (concat time-str text)))
     (propertize
@@ -441,6 +474,8 @@ TEXT1 < TEXT2. This function makes no-time items in front of timed-items."
 (defvar cfw:org-custom-map
   (cfw:define-keymap
    '(
+     ("C-c C-s" . cfw:org-schedule)
+     ("C-c C-v" . cfw:org-deadline) 
      ("g"   . cfw:refresh-calendar-buffer)
      ("j"   . cfw:org-goto-date)
      ("k"   . org-capture)
@@ -451,6 +486,8 @@ TEXT1 < TEXT2. This function makes no-time items in front of timed-items."
      ("v m" . cfw:change-view-month)
      ("x"   . cfw:org-clean-exit)
      ("SPC" . cfw:org-open-agenda-day)
+     ("S" . cfw:org-schedule)
+     ("D" . cfw:org-deadline)     
      ))
   "Key map for the calendar buffer.")
 
@@ -503,3 +540,4 @@ TEXT1 < TEXT2. This function makes no-time items in front of timed-items."
 
 (provide 'calfw-org)
 ;;; calfw-org.el ends here
+
